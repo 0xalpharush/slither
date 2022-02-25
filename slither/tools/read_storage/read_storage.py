@@ -460,6 +460,7 @@ def _find_mapping_slot(
         key = int(key)
     key = coerce_type(key_type, key)
     slot = keccak(encode_abi([key_type, "uint256"], [key, decode_single("uint256", slot)]))
+    print(slot)
 
     if is_user_defined_type(target_variable.type.type_to) and is_struct(
         target_variable.type.type_to.type
@@ -492,6 +493,18 @@ def _find_mapping_slot(
             # if map struct, will be bytes32(uint256(keccak256(abi.encode(key1, keccak256(abi.encode(key0, uint(slot)))))) + structFieldDepth);
             info_tmp, type_to, slot, size, offset = _find_struct_var_slot(elems, slot, struct_var)
             info += info_tmp
+
+    elif is_array(target_variable.type.type_to):
+        slot = keccak(slot)
+        type_to = target_variable.type.type_to.type.name
+        size = target_variable.type.type_to.type.size  # bits
+        offset = 0
+        
+        if deep_key:
+            slot_int = int.from_bytes(slot, "big") + int(deep_key)
+            slot = int.to_bytes(slot_int, 32, byteorder="big")
+
+        return info, type_to, slot, size, offset
 
     else:  # mapping(elem => elem)
         type_to = target_variable.type.type_to.name  # the value's elementary type
